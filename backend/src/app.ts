@@ -100,8 +100,8 @@ app.use(errorHandler);
 // ========================
 // Start Server
 // ========================
-httpServer.listen(env.PORT, () => {
-  console.log(`🚀 GoMontir API running on http://localhost:${env.PORT}`);
+httpServer.listen(env.PORT, '0.0.0.0', () => {
+  console.log(`🚀 GoMontir API running on http://0.0.0.0:${env.PORT}`);
   console.log(`📡 Socket.io ready`);
   console.log(`🌍 Environment: ${env.NODE_ENV}`);
 });

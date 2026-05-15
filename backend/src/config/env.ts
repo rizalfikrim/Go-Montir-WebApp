@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const envSchema = z.object({
-  PORT: z.string().default('5000').transform(Number),
+  PORT: z.preprocess((val) => val ?? '8080', z.string().transform(Number)),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL wajib diisi'),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET wajib diisi'),
