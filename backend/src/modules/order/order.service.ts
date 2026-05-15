@@ -20,6 +20,7 @@ export const createOrder = async (userId: string, data: {
   userLongitude: number;
   userAddress?: string;
   scheduledAt?: Date;
+  mechanicId?: string;
 }) => {
   const order = await prisma.order.create({
     data: {
