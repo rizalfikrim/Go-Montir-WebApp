@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: gomontir_db_staging
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: gomontir_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - gomontir_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gomontir_backend_staging
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: "postgresql://postgres:password@db:5432/gomontir_db?schema=public"
+      JWT_ACCESS_SECRET: staging_secret_key_123
+      JWT_REFRESH_SECRET: staging_refresh_key_123
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      CLIENT_URL: http://localhost:5173
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-your_key_here}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-your_key_here}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-your_key_here}
+      MIDTRANS_IS_PRODUCTION: "false"
+
+volumes:
+  gomontir_db_data:

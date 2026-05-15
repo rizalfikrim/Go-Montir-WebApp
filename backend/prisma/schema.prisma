@@ -1,0 +1,364 @@
+// This is your Prisma schema file for GoMontir
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis]
+}
+
+// ================================
+// ENUMS
+// ================================
+
+enum Role {
+  USER
+  MECHANIC
+  ADMIN
+}
+
+enum MechanicStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum VehicleType {
+  MOTOR
+  MOBIL
+  TRUK
+}
+
+enum OrderStatus {
+  PENDING
+  SEARCHING
+  WAITING_ACCEPT
+  MECHANIC_ACCEPTED
+  OTW
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  QRIS
+  TRANSFER
+  TUNAI
+  VIRTUAL_ACCOUNT
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  PAYMENT_UPDATE
+  PROMO
+  SYSTEM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// ================================
+// USER & AUTH
+// ================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  phone        String   @unique
+  role         Role     @default(USER)
+  avatarUrl    String?
+  isVerified   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  mechanic        MechanicProfile?
+  vehicles        VehicleInfo[]
+  ordersAsUser    Order[]           @relation("UserOrders")
+  notifications   Notification[]
+  reviewsGiven    Review[]          @relation("ReviewerRelation")
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ================================
+// MECHANIC
+// ================================
+
+model MechanicProfile {
+  id                String         @id @default(cuid())
+  userId            String         @unique
+  bio               String?
+  specializations   String[]       // ["Ban", "Mesin", "Kelistrikan"]
+  status            MechanicStatus @default(INACTIVE)
+  rating            Float          @default(0)
+  totalReviews      Int            @default(0)
+  totalOrdersDone   Int            @default(0)
+  isOnline          Boolean        @default(false)
+  // Location stored as lat/lng for simplicity (PostGIS for advanced queries)
+  lastLatitude      Float?
+  lastLongitude     Float?
+  lastLocationAt    DateTime?
+  certificationUrl  String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ordersAsMechanic Order[]              @relation("MechanicOrders")
+  subscriptions MechanicSubscription[]
+  reviewsReceived Review[]              @relation("MechanicReviewRelation")
+
+  @@index([status, isOnline])
+  @@map("mechanic_profiles")
+}
+
+// ================================
+// VEHICLE
+// ================================
+
+model VehicleInfo {
+  id          String      @id @default(cuid())
+  userId      String
+  brand       String      // Honda, Yamaha, Toyota
+  model       String      // Beat, Vario, Avanza
+  year        Int
+  type        VehicleType
+  plateNumber String?
+  color       String?
+  isDefault   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+  @@map("vehicle_info")
+}
+
+// ================================
+// SERVICE
+// ================================
+
+model ServiceType {
+  id            String   @id @default(cuid())
+  name          String   // "Ban Kempes", "Mesin Mati"
+  description   String?
+  basePrice     Float
+  estimatedTime Int      // menit
+  iconUrl       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  orders Order[]
+
+  @@map("service_types")
+}
+
+// ================================
+// SUBSCRIPTION
+// ================================
+
+model SubscriptionPackage {
+  id          String   @id @default(cuid())
+  name        String   // "Paket Starter", "Paket Pro"
+  description String?
+  price       Float
+  durationDay Int      // durasi dalam hari
+  benefits    String[] // list benefit
+  maxOrders   Int?     // null = unlimited
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions MechanicSubscription[]
+
+  @@map("subscription_packages")
+}
+
+model MechanicSubscription {
+  id           String             @id @default(cuid())
+  mechanicId   String
+  packageId    String
+  status       SubscriptionStatus @default(ACTIVE)
+  startDate    DateTime           @default(now())
+  endDate      DateTime
+  createdAt    DateTime           @default(now())
+
+  mechanic MechanicProfile     @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+  package  SubscriptionPackage @relation(fields: [packageId], references: [id])
+
+  @@index([mechanicId])
+  @@map("mechanic_subscriptions")
+}
+
+// ================================
+// ORDER
+// ================================
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  mechanicId      String?
+  vehicleId       String?
+  vehicleName     String?
+  serviceTypeId   String?
+  status          OrderStatus @default(PENDING)
+  description     String?     // Deskripsi masalah dari user
+  userLatitude    Float
+  userLongitude   Float
+  userAddress     String?
+  totalCost       Float?
+  estimatedCost   Float?
+  scheduledAt     DateTime?   // null = sekarang / on-demand
+  acceptedAt      DateTime?
+  arrivedAt       DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user        User             @relation("UserOrders", fields: [userId], references: [id])
+  mechanic    MechanicProfile? @relation("MechanicOrders", fields: [mechanicId], references: [id])
+  vehicle     VehicleInfo?     @relation(fields: [vehicleId], references: [id])
+  serviceType ServiceType?     @relation(fields: [serviceTypeId], references: [id])
+  transaction Transaction?
+  review      Review?
+
+  @@index([userId])
+  @@index([mechanicId])
+  @@index([status])
+  @@map("orders")
+}
+
+// ================================
+// PAYMENT
+// ================================
+
+model Transaction {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  method        PaymentMethod @default(QRIS)
+  gatewayRef    String?       // Midtrans order ID
+  gatewayToken  String?       // Snap token
+  paymentUrl    String?       // URL redirect pembayaran
+  paidAt        DateTime?
+  expiredAt     DateTime?
+  metadata      Json?         // raw payload dari gateway
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([gatewayRef])
+  @@map("transactions")
+}
+
+// ================================
+// REVIEW
+// ================================
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  reviewerId  String   // User yang memberi review
+  mechanicId  String
+  rating      Int      // 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  order    Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewer User            @relation("ReviewerRelation", fields: [reviewerId], references: [id])
+  mechanic MechanicProfile @relation("MechanicReviewRelation", fields: [mechanicId], references: [id])
+
+  @@index([mechanicId])
+  @@map("reviews")
+}
+
+// ================================
+// NOTIFICATION
+// ================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?            // Payload tambahan (orderId, dll)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ================================
+// AUDIT LOG
+// ================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   // "ORDER_CREATED", "USER_BANNED", dll
+  entity     String   // "Order", "User"
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
