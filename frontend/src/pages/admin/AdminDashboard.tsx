@@ -11,13 +11,25 @@ import { id } from 'date-fns/locale'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => adminApi.getDashboard().then(r => r.data.data),
   })
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-primary" /></div>
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+        <AlertCircle className="w-12 h-12 text-danger" />
+        <div>
+          <h3 className="text-lg font-bold text-white">Gagal Memuat Data</h3>
+          <p className="text-sm text-slate-400">{(error as any)?.message || 'Terjadi kesalahan saat mengambil statistik admin.'}</p>
+        </div>
+      </div>
+    )
   }
 
   const { stats, recentOrders } = data

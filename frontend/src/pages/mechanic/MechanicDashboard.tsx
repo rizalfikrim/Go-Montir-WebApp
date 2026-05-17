@@ -13,12 +13,14 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLocationTracker } from '@/hooks/useLocationTracker'
+import PartnershipPopup from '@/components/mechanic/PartnershipPopup'
 
 export default function MechanicDashboard() {
   const { user, accessToken } = useAuthStore()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [incomingOrder, setIncomingOrder] = useState<any>(null)
+  const [showPartnershipPopup, setShowPartnershipPopup] = useState(false)
   
   const { data: profile, isLoading: loadingProfile } = useQuery({
     queryKey: ['mechanic-profile'],
@@ -29,10 +31,14 @@ export default function MechanicDashboard() {
     mutationFn: async (status: boolean) => {
       // Jika ingin online, ambil lokasi dulu untuk verifikasi
       if (status) {
+        const hasSubscription = profile?.subscriptions && profile.subscriptions.length > 0;
+        if (!hasSubscription) {
+          throw new Error('SUBSCRIPTION_REQUIRED');
+        }
+
         return new Promise((resolve, reject) => {
           if (!navigator.geolocation) {
-            toast.error('Browser tidak mendukung GPS.')
-            return reject('No GPS')
+            return reject(new Error('Browser tidak mendukung GPS.'))
           }
           
           navigator.geolocation.getCurrentPosition(
@@ -48,8 +54,7 @@ export default function MechanicDashboard() {
               }
             },
             (err) => {
-              toast.error('Gagal mendapatkan lokasi. Pastikan GPS aktif.')
-              reject(err)
+              reject(new Error('Gagal mendapatkan lokasi. Pastikan GPS aktif.'))
             }
           )
         })
@@ -61,6 +66,14 @@ export default function MechanicDashboard() {
     onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: ['mechanic-profile'] })
       toast.success(status ? 'Verifikasi lokasi berhasil. Anda sekarang ONLINE!' : 'Anda sekarang OFFLINE.')
+    },
+    onError: (err: any) => {
+      if (err.message === 'SUBSCRIPTION_REQUIRED') {
+        toast.error('Anda harus berlangganan paket kemitraan untuk bisa online!')
+        setShowPartnershipPopup(true)
+      } else {
+        toast.error(err.message || 'Terjadi kesalahan')
+      }
     }
   })
 
@@ -94,6 +107,28 @@ export default function MechanicDashboard() {
       socket.off('new_order_request')
     }
   }, [accessToken])
+
+  useEffect(() => {
+    // Show partnership popup once per session if mechanic has no active subscription
+    if (!loadingProfile && profile) {
+      const hasSubscription = profile.subscriptions && profile.subscriptions.length > 0;
+      
+      if (!hasSubscription) {
+        const hasSeen = sessionStorage.getItem('hasSeenPartnershipPopup')
+        if (!hasSeen) {
+          const timer = setTimeout(() => {
+            setShowPartnershipPopup(true)
+          }, 1500)
+          return () => clearTimeout(timer)
+        }
+      }
+    }
+  }, [loadingProfile, profile])
+
+  const handleClosePartnershipPopup = () => {
+    setShowPartnershipPopup(false)
+    sessionStorage.setItem('hasSeenPartnershipPopup', 'true')
+  }
 
   if (loadingProfile) {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" /></div>
@@ -264,6 +299,11 @@ export default function MechanicDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PartnershipPopup 
+        isOpen={showPartnershipPopup} 
+        onClose={handleClosePartnershipPopup} 
+      />
     </div>
   )
 }

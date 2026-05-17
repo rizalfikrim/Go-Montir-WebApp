@@ -67,6 +67,10 @@ export const getMechanicProfileByUserId = async (userId: string) => {
     where: { userId },
     include: {
       user: { select: { name: true, avatarUrl: true, phone: true, email: true } },
+      subscriptions: {
+        where: { status: 'ACTIVE' },
+        include: { package: true }
+      }
     },
   });
   if (!mechanic) throw new AppError('Profil montir tidak ditemukan.', 404);
