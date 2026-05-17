@@ -49,16 +49,24 @@ router.get('/users', async (req, res, next) => {
     const limit = 20;
     const skip = (page - 1) * limit;
     const search = req.query.search as string | undefined;
+    const role = req.query.role as string | undefined;
 
-    const where = search
-      ? { OR: [{ name: { contains: search, mode: 'insensitive' as any } }, { email: { contains: search, mode: 'insensitive' as any } }] }
-      : {};
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    if (role && role !== 'ALL') {
+      where.role = role;
+    }
 
     const [total, users] = await Promise.all([
       prisma.user.count({ where }),
       prisma.user.findMany({
         where, skip, take: limit,
-        select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
+        select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, isVerified: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
       }),
     ]);
@@ -79,6 +87,21 @@ router.patch('/users/:id/toggle-active', async (req, res, next) => {
     });
 
     res.json({ success: true, message: `User ${updated.isActive ? 'diaktifkan' : 'dinonaktifkan'}.` });
+  } catch (e) { next(e); }
+});
+
+// PATCH /api/admin/users/:id/verify
+router.patch('/users/:id/verify', async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { isVerified: !user.isVerified },
+    });
+
+    res.json({ success: true, message: `Verifikasi ${updated.isVerified ? 'diberikan' : 'dicabut'}.` });
   } catch (e) { next(e); }
 });
 

@@ -3,7 +3,7 @@ import { adminApi } from '@/services'
 import { 
   Users, Search, Filter, MoreHorizontal, 
   ChevronLeft, ChevronRight, UserX, UserCheck, 
-  Shield, Mail, Phone, Loader2, Calendar
+  Shield, Mail, Phone, Loader2, CheckCircle2, XCircle
 } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
@@ -13,16 +13,25 @@ import toast from 'react-hot-toast'
 export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('ALL')
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', page, search],
-    queryFn: () => adminApi.getUsers(page, search).then(r => r.data.data),
+    queryKey: ['admin-users', page, search, roleFilter],
+    queryFn: () => adminApi.getUsers(page, search, roleFilter).then(r => r.data.data),
     placeholderData: (previousData) => previousData,
   })
 
   const toggleActiveMutation = useMutation({
     mutationFn: (id: string) => adminApi.toggleUserActive(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success(res.data.message)
+    }
+  })
+
+  const toggleVerifyMutation = useMutation({
+    mutationFn: (id: string) => adminApi.toggleUserVerify(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success(res.data.message)
@@ -48,9 +57,16 @@ export default function AdminUsersPage() {
               className="input pl-10 py-2 w-full md:w-64 text-sm"
             />
           </div>
-          <button className="btn-secondary py-2 px-3">
-            <Filter className="w-4 h-4" />
-          </button>
+          <select 
+            value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            className="input py-2 text-sm bg-slate-800 border-slate-700"
+          >
+            <option value="ALL">Semua Role</option>
+            <option value="USER">User (Pelanggan)</option>
+            <option value="MECHANIC">Mechanic (Montir)</option>
+            <option value="ADMIN">Admin</option>
+          </select>
         </div>
       </div>
 
@@ -105,25 +121,49 @@ export default function AdminUsersPage() {
                     <div className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-success' : 'bg-danger'} shadow-[0_0_8px_currentColor]`} />
                     <span className="text-xs font-bold uppercase">{u.isActive ? 'Aktif' : 'Nonaktif'}</span>
                   </div>
+                  {u.role === 'MECHANIC' && (
+                    <div className={`mt-2 flex items-center gap-1.5 text-[10px] font-bold ${u.isVerified ? 'text-info' : 'text-warning'}`}>
+                      {u.isVerified ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                      {u.isVerified ? 'TERVERIFIKASI' : 'BELUM VERIFIKASI'}
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <p className="text-xs text-slate-400 font-medium">{format(new Date(u.createdAt), 'dd/MM/yyyy', { locale: id })}</p>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button 
-                    onClick={() => toggleActiveMutation.mutate(u.id)}
-                    disabled={toggleActiveMutation.isPending}
-                    className={`p-2 rounded-lg transition-all ${
-                      u.isActive 
-                        ? 'text-danger hover:bg-danger/10' 
-                        : 'text-success hover:bg-success/10'
-                    }`}
-                    title={u.isActive ? 'Nonaktifkan User' : 'Aktifkan User'}
-                  >
-                    {toggleActiveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 
-                      u.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />
-                    }
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    {u.role === 'MECHANIC' && (
+                      <button 
+                        onClick={() => toggleVerifyMutation.mutate(u.id)}
+                        disabled={toggleVerifyMutation.isPending}
+                        className={`p-2 rounded-lg transition-all ${
+                          u.isVerified 
+                            ? 'text-warning hover:bg-warning/10' 
+                            : 'text-info hover:bg-info/10'
+                        }`}
+                        title={u.isVerified ? 'Cabut Verifikasi' : 'Verifikasi Montir'}
+                      >
+                        {toggleVerifyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                          u.isVerified ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />
+                        }
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => toggleActiveMutation.mutate(u.id)}
+                      disabled={toggleActiveMutation.isPending}
+                      className={`p-2 rounded-lg transition-all ${
+                        u.isActive 
+                          ? 'text-danger hover:bg-danger/10' 
+                          : 'text-success hover:bg-success/10'
+                      }`}
+                      title={u.isActive ? 'Nonaktifkan User' : 'Aktifkan User'}
+                    >
+                      {toggleActiveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                        u.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />
+                      }
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

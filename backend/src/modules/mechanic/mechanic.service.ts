@@ -89,6 +89,12 @@ export const updateMechanicProfile = async (userId: string, data: {
 };
 
 export const setOnlineStatus = async (userId: string, isOnline: boolean) => {
+  if (isOnline) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.isVerified) {
+      throw new AppError('Akun montir Anda belum diverifikasi oleh admin. Silakan tunggu atau hubungi CS.', 403);
+    }
+  }
   return prisma.mechanicProfile.update({
     where: { userId },
     data: { isOnline },

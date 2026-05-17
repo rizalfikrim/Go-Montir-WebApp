@@ -66,9 +66,10 @@ export const notificationApi = {
 // Admin
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
-  getUsers: (page = 1, search?: string) =>
-    api.get(`/admin/users?page=${page}${search ? `&search=${search}` : ''}`),
+  getUsers: (page = 1, search?: string, role?: string) =>
+    api.get(`/admin/users?page=${page}${search ? `&search=${search}` : ''}${role ? `&role=${role}` : ''}`),
   toggleUserActive: (id: string) => api.patch(`/admin/users/${id}/toggle-active`),
+  toggleUserVerify: (id: string) => api.patch(`/admin/users/${id}/verify`),
   getOrders: (page = 1, status?: string) =>
     api.get(`/admin/orders?page=${page}${status ? `&status=${status}` : ''}`),
 }
