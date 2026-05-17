@@ -101,6 +101,7 @@ model User {
   reviewsGiven    Review[]          @relation("ReviewerRelation")
   refreshTokens   RefreshToken[]
   auditLogs       AuditLog[]
+  chatMessages    ChatMessage[]
 
   @@index([email])
   @@index([phone])
@@ -267,6 +268,7 @@ model Order {
   serviceType ServiceType?     @relation(fields: [serviceTypeId], references: [id])
   transaction Transaction?
   review      Review?
+  chatMessages ChatMessage[]
 
   @@index([userId])
   @@index([mechanicId])
@@ -318,6 +320,25 @@ model Review {
 
   @@index([mechanicId])
   @@map("reviews")
+}
+
+// ================================
+// CHAT
+// ================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  orderId   String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([senderId])
+  @@map("chat_messages")
 }
 
 // ================================

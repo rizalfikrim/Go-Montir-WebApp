@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '@/config/env';
 import { updateLocation } from '@/modules/mechanic/mechanic.service';
+import prisma from '@/config/database';
 
 interface SocketUser {
   id: string;
@@ -78,6 +79,32 @@ export const setupSocketIO = (io: Server) => {
         });
       } catch (err) {
         console.error('Location update error:', err);
+      }
+    });
+
+    // ========================
+    // Chat Message (User <-> Mechanic)
+    // ========================
+    socket.on('send_message', async (data: { orderId: string; text: string }) => {
+      try {
+        const { orderId, text } = data;
+        
+        // Simpan pesan ke DB
+        const message = await prisma.chatMessage.create({
+          data: {
+            orderId,
+            senderId: user.id,
+            text,
+          },
+          include: {
+            sender: { select: { id: true, name: true, role: true } },
+          },
+        });
+
+        // Broadcast ke room order
+        io.to(`order:${orderId}`).emit('new_message', message);
+      } catch (err) {
+        console.error('Send message error:', err);
       }
     });
 

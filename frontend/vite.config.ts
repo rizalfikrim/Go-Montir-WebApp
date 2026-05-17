@@ -48,11 +48,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://go-montir-404682063468.asia-southeast1.run.app',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: 'https://go-montir-404682063468.asia-southeast1.run.app',
         changeOrigin: true,
         ws: true,
       },

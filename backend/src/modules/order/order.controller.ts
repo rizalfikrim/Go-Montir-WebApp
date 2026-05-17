@@ -77,3 +77,31 @@ export const submitReview = async (req: AuthRequest, res: Response, next: NextFu
     res.status(201).json({ success: true, message: 'Review berhasil dikirim.', data: review });
   } catch (e) { next(e); }
 };
+
+export const getChatHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.orderId as string },
+      select: { userId: true, mechanic: { select: { userId: true } } },
+    });
+    
+    if (!order) throw new AppError('Pesanan tidak ditemukan.', 404);
+    
+    const isOwner = order.userId === req.user!.id;
+    const isMechanic = order.mechanic?.userId === req.user!.id;
+    
+    if (!isOwner && !isMechanic && req.user!.role !== 'ADMIN') {
+      throw new AppError('Tidak memiliki akses ke chat ini.', 403);
+    }
+
+    const messages = await prisma.chatMessage.findMany({
+      where: { orderId: req.params.orderId as string },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sender: { select: { id: true, name: true, role: true } },
+      },
+    });
+
+    res.json({ success: true, data: messages });
+  } catch (e) { next(e); }
+};

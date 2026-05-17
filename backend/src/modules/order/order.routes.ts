@@ -13,5 +13,6 @@ router.get('/:orderId', ctrl.getOrderDetail);
 router.patch('/:orderId/status', validate(updateStatusSchema), ctrl.updateStatus);
 router.post('/:orderId/accept', authorize('MECHANIC'), ctrl.acceptOrder);
 router.post('/:orderId/review', authorize('USER'), validate(submitReviewSchema), ctrl.submitReview);
+router.get('/:orderId/chat', ctrl.getChatHistory);
 
 export default router;

@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import Map from '@/components/common/Map'
+import ChatDrawer from '@/components/common/ChatDrawer'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; desc: string }> = {
   PENDING:           { label: 'Menunggu', icon: Clock, color: 'text-warning', desc: 'Pesanan Anda telah masuk sistem.' },
@@ -37,6 +38,8 @@ export default function OrderTrackingPage() {
   const [mechanicPos, setMechanicPos] = useState<[number, number] | null>(null)
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [socketInstance, setSocketInstance] = useState<any>(null)
 
   const { data: initialOrder, isLoading } = useQuery({
     queryKey: ['order', orderId],
@@ -53,6 +56,7 @@ export default function OrderTrackingPage() {
     if (!orderId || !accessToken) return
 
     const socket = connectSocket(accessToken)
+    setSocketInstance(socket)
     socket.emit('join_order', orderId)
 
     socket.on('order_status_changed', (updated: any) => {
@@ -326,7 +330,10 @@ export default function OrderTrackingPage() {
               </div>
 
               <div className="flex gap-2">
-                <button className="flex-1 btn-secondary py-3 text-sm gap-2">
+                <button 
+                  onClick={() => setIsChatOpen(true)}
+                  className="flex-1 btn-secondary py-3 text-sm gap-2"
+                >
                   <MessageSquare className="w-4 h-4" />
                   Chat Montir
                 </button>
@@ -358,6 +365,15 @@ export default function OrderTrackingPage() {
                 <a href={`tel:${order.user.phone}`} className="p-3 bg-primary/20 text-primary rounded-xl">
                   <Phone className="w-5 h-5" />
                 </a>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsChatOpen(true)}
+                  className="flex-1 btn-secondary py-3 text-sm gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Chat Pelanggan
+                </button>
               </div>
             </motion.section>
           )}
@@ -627,6 +643,15 @@ export default function OrderTrackingPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Chat Drawer */}
+      <ChatDrawer 
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        orderId={orderId!}
+        socket={socketInstance}
+        recipientName={isUser ? (order.mechanic?.user.name || 'Montir') : (order.user?.name || 'Pelanggan')}
+      />
     </div>
   )
 }

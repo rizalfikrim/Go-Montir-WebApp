@@ -93,11 +93,11 @@ export default function LoginPage() {
 
       {/* Demo credentials */}
       <div className="mt-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
-        <p className="text-xs text-slate-400 font-medium mb-2">Demo Credentials:</p>
+        <p className="text-xs text-slate-400 font-medium mb-2">Demo Credentials (Seeded):</p>
         <div className="space-y-1 text-xs text-slate-300">
-          <p>👤 User: <span className="text-primary">user@demo.com</span> / demo1234</p>
-          <p>🔧 Montir: <span className="text-primary">montir@demo.com</span> / demo1234</p>
-          <p>⚙️ Admin: <span className="text-primary">admin@demo.com</span> / demo1234</p>
+          <p>👤 User: <span className="text-primary">user1@gmail.com</span> / password123</p>
+          <p>🔧 Montir: <span className="text-primary">mekanik1@gmail.com</span> / password123</p>
+          <p>⚙️ Admin: <span className="text-primary">admin@gomontir.com</span> / password123</p>
         </div>
       </div>
     </div>

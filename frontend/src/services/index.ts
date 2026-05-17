@@ -41,6 +41,7 @@ export const orderApi = {
     api.patch(`/orders/${id}/status`, { status, cancelReason }),
   accept: (id: string) => api.post(`/orders/${id}/accept`),
   submitReview: (id: string, data: object) => api.post(`/orders/${id}/review`, data),
+  getChatHistory: (id: string) => api.get(`/orders/${id}/chat`),
 }
 
 // Service Types
