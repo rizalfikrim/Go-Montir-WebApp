@@ -31,10 +31,6 @@ export default function MechanicDashboard() {
     mutationFn: async (status: boolean) => {
       // Jika ingin online, ambil lokasi dulu untuk verifikasi
       if (status) {
-        const hasSubscription = profile?.subscriptions && profile.subscriptions.length > 0;
-        if (!hasSubscription) {
-          throw new Error('SUBSCRIPTION_REQUIRED');
-        }
 
         return new Promise((resolve, reject) => {
           if (!navigator.geolocation) {
@@ -68,8 +64,12 @@ export default function MechanicDashboard() {
       toast.success(status ? 'Verifikasi lokasi berhasil. Anda sekarang ONLINE!' : 'Anda sekarang OFFLINE.')
     },
     onError: (err: any) => {
-      if (err.message === 'SUBSCRIPTION_REQUIRED') {
-        toast.error('Anda harus berlangganan paket kemitraan untuk bisa online!')
+      const hasSubscription = profile?.subscriptions && profile.subscriptions.length > 0;
+      
+      // Jika terjadi error (misalnya karena belum is_verified dari backend)
+      // dan mekanik belum punya subscription, kita munculkan popup
+      if (!hasSubscription) {
+        toast.error('Akun belum diverifikasi atau belum memiliki paket kemitraan aktif.')
         setShowPartnershipPopup(true)
       } else {
         toast.error(err.message || 'Terjadi kesalahan')
@@ -114,20 +114,17 @@ export default function MechanicDashboard() {
       const hasSubscription = profile.subscriptions && profile.subscriptions.length > 0;
       
       if (!hasSubscription) {
-        const hasSeen = sessionStorage.getItem('hasSeenPartnershipPopup')
-        if (!hasSeen) {
-          const timer = setTimeout(() => {
-            setShowPartnershipPopup(true)
-          }, 1500)
-          return () => clearTimeout(timer)
-        }
+        // Tampilkan popup setiap kali dashboard di-load jika belum ada subscription
+        const timer = setTimeout(() => {
+          setShowPartnershipPopup(true)
+        }, 1500)
+        return () => clearTimeout(timer)
       }
     }
   }, [loadingProfile, profile])
 
   const handleClosePartnershipPopup = () => {
     setShowPartnershipPopup(false)
-    sessionStorage.setItem('hasSeenPartnershipPopup', 'true')
   }
 
   if (loadingProfile) {

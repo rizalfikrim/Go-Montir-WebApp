@@ -1,3 +1,4 @@
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -18,6 +19,7 @@ import OrderTrackingPage from '@/pages/user/OrderTrackingPage'
 import ProfilePage from '@/pages/user/ProfilePage'
 import OrderHistoryPage from '@/pages/user/OrderHistoryPage'
 import NotificationsPage from '@/pages/user/NotificationsPage'
+import ChatbotPage from '@/pages/user/ChatbotPage'
 
 // Pages — Mechanic
 import MechanicDashboard from '@/pages/mechanic/MechanicDashboard'
@@ -30,7 +32,7 @@ import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import AdminOrdersPage from '@/pages/admin/AdminOrdersPage'
 
 // Guards
-const PrivateRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
+const PrivateRoute = ({ children, roles }: { children: React.ReactNode; roles?: string[] }) => {
   const { user, isAuthenticated } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/auth/login" replace />
   
@@ -61,6 +63,7 @@ export default function App() {
       }>
         <Route index element={<HomePage />} />
         <Route path="search" element={<SearchMechanicPage />} />
+        <Route path="chatbot" element={<ChatbotPage />} />
         <Route path="history" element={<OrderHistoryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />

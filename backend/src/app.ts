@@ -1,3 +1,6 @@
+// import "dotenv/config";
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -5,6 +8,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { Server } from 'socket.io';
+import chatbotRoutes from '@/modules/chatbot/chatbot.routes';
 
 import { env } from '@/config/env';
 import { errorHandler } from '@/middlewares/errorHandler';
@@ -30,7 +34,8 @@ const httpServer = http.createServer(app);
 // ========================
 export const io = new Server(httpServer, {
   cors: {
-    origin: env.CLIENT_URL,
+    // origin: env.CLIENT_URL || '*',
+    origin: '*',
     credentials: true,
   },
 });
@@ -41,7 +46,8 @@ setupSocketIO(io);
 // ========================
 app.use(helmet());
 app.use(cors({
-  origin: env.CLIENT_URL,
+  // origin: env.CLIENT_URL,
+  origin: "*",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -81,6 +87,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // ========================
 // 404 Handler
