@@ -46,7 +46,7 @@ export const orderApi = {
 
 // Service Types
 export const serviceApi = {
-  getAll: () => api.get('/services'),
+  getAll: (vehicleType?: string) => api.get(`/services${vehicleType ? `?vehicleType=${vehicleType}` : ''}`),
 }
 
 // Subscriptions

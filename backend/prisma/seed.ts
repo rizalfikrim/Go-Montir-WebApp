@@ -20,6 +20,7 @@ async function main() {
       description: 'Layanan tambal ban untuk sepeda motor di lokasi.',
       basePrice: 25000,
       estimatedTime: 30,
+      vehicleType: VehicleType.MOTOR,
     }
   });
   
@@ -32,6 +33,7 @@ async function main() {
       description: 'Pemasangan aki baru untuk mobil Anda.',
       basePrice: 150000,
       estimatedTime: 45,
+      vehicleType: VehicleType.MOBIL,
     }
   });
 
@@ -44,6 +46,7 @@ async function main() {
       description: 'Pengecekan dan perbaikan ringan pada mesin.',
       basePrice: 100000,
       estimatedTime: 60,
+      vehicleType: VehicleType.MOTOR,
     }
   });
 

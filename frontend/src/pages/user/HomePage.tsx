@@ -17,12 +17,17 @@ export default function HomePage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [msgIdx, setMsgIdx] = useState(0)
-  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null)
+  const [vehicleFilter, setVehicleFilter] = useState<'MOTOR' | 'MOBIL' | ''>('')
 
   const { data: services } = useQuery({
-    queryKey: ['services'],
-    queryFn: () => serviceApi.getAll().then(r => r.data.data),
+    queryKey: ['services', vehicleFilter],
+    queryFn: () => serviceApi.getAll(vehicleFilter).then(r => r.data.data),
   })
+
+  // Apply client‑side filter as a fallback (in case backend returns all records)
+  const filteredServices = (services ?? []).filter((svc: any) =>
+    vehicleFilter === '' || svc.vehicleType === vehicleFilter
+  )
 
   // Rotate status messages
   useEffect(() => {
@@ -39,7 +44,7 @@ export default function HomePage() {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+
         navigate('/search', { state: { lat: pos.coords.latitude, lon: pos.coords.longitude } })
       },
       () => toast.error('Akses lokasi ditolak. Aktifkan GPS.')
@@ -95,24 +100,81 @@ export default function HomePage() {
 
       {/* Service Types */}
       <div>
-        <h2 className="text-lg font-bold text-white mb-3">Jenis Layanan</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {services?.slice(0, 4).map((svc: any) => (
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 className="text-lg font-bold text-white">Jenis Layanan</h2>
+          
+          {/* Tab Filter Kendaraan */}
+          <div className="flex bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60">
             <button
-              key={svc.id}
-              onClick={() => navigate('/search', { state: { serviceTypeId: svc.id } })}
-              className="card p-4 text-left hover:border-primary/40 group"
+              type="button"
+              onClick={() => setVehicleFilter('')}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                vehicleFilter === ''
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <div className="text-2xl mb-2">{svc.iconUrl || '🔧'}</div>
-              <p className="font-semibold text-sm text-white group-hover:text-primary transition-colors">{svc.name}</p>
-              <p className="text-xs text-slate-400 mt-1">~{svc.estimatedTime} menit</p>
-              <p className="text-xs text-primary font-medium mt-1">
-                Mulai Rp {svc.basePrice?.toLocaleString('id-ID')}
-              </p>
+              Semua
             </button>
-          )) ?? Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton h-28 rounded-2xl" />
-          ))}
+            <button
+              type="button"
+              onClick={() => setVehicleFilter('MOTOR')}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                vehicleFilter === 'MOTOR'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Motor
+            </button>
+            <button
+              type="button"
+              onClick={() => setVehicleFilter('MOBIL')}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                vehicleFilter === 'MOBIL'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Mobil
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {filteredServices && filteredServices.length > 0 ? (
+            filteredServices.slice(0, 4).map((svc: any) => (
+              <button
+                key={svc.id}
+                onClick={() => navigate('/search', { state: { serviceTypeId: svc.id } })}
+                className="card p-4 text-left hover:border-primary/40 group relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="text-2xl">{svc.iconUrl || '🔧'}</div>
+                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                    svc.vehicleType === 'MOBIL' 
+                      ? 'bg-info/10 text-info border border-info/20' 
+                      : 'bg-primary/10 text-primary border border-primary/20'
+                  }`}>
+                    {svc.vehicleType || 'MOTOR'}
+                  </span>
+                </div>
+                <p className="font-semibold text-sm text-white group-hover:text-primary transition-colors line-clamp-1">{svc.name}</p>
+                <p className="text-xs text-slate-400 mt-1">~{svc.estimatedTime} menit</p>
+                <p className="text-xs text-primary font-medium mt-1">
+                  Mulai Rp {svc.basePrice?.toLocaleString('id-ID')}
+                </p>
+              </button>
+            ))
+          ) : filteredServices ? (
+            <div className="col-span-2 text-center py-6 text-xs text-slate-500 card">
+              Tidak ada layanan ditemukan.
+            </div>
+          ) : (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="skeleton h-28 rounded-2xl" />
+            ))
+          )}
         </div>
       </div>
 

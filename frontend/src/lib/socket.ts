@@ -4,7 +4,8 @@ let socket: Socket | null = null
 
 export const getSocket = (token?: string): Socket => {
   if (!socket || !socket.connected) {
-    socket = io('/', {
+    const socketUrl = import.meta.env.DEV ? '/' : (import.meta.env.VITE_API_URL || '/')
+    socket = io(socketUrl, {
       auth: { token },
       withCredentials: true,
       transports: ['websocket', 'polling'],
@@ -13,6 +14,7 @@ export const getSocket = (token?: string): Socket => {
   }
   return socket
 }
+
 
 export const connectSocket = (token: string) => {
   const s = getSocket(token)

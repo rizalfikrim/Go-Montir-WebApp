@@ -181,14 +181,15 @@ model VehicleInfo {
 // ================================
 
 model ServiceType {
-  id            String   @id @default(cuid())
-  name          String   // "Ban Kempes", "Mesin Mati"
+  id            String      @id @default(cuid())
+  name          String      // "Ban Kempes", "Mesin Mati"
   description   String?
   basePrice     Float
-  estimatedTime Int      // menit
+  estimatedTime Int         // menit
   iconUrl       String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  isActive      Boolean     @default(true)
+  vehicleType   VehicleType @default(MOTOR)
+  createdAt     DateTime    @default(now())
 
   orders Order[]
 

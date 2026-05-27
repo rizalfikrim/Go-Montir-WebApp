@@ -5,10 +5,17 @@ import prisma from '@/config/database';
 const router = Router();
 
 // GET /api/services — list semua service type aktif
-router.get('/', async (_req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
+    const { vehicleType } = req.query;
+    const filter: any = { isActive: true };
+    
+    if (vehicleType && typeof vehicleType === 'string') {
+      filter.vehicleType = vehicleType.toUpperCase();
+    }
+
     const data = await prisma.serviceType.findMany({
-      where: { isActive: true },
+      where: filter,
       orderBy: { name: 'asc' },
     });
     res.json({ success: true, data });

@@ -29,8 +29,11 @@ const SUGGESTION_CHIPS = [
   'Rem Blong / Tidak Pakem',
 ]
 
-// BACKEND URL (Sesuaikan portnya dengan server Express Anda)
-const BACKEND_API_URL = 'http://localhost:5000/api/chatbot'
+// BACKEND URL (Dinamis berdasarkan environment)
+const BACKEND_API_URL = import.meta.env.DEV
+  ? '/api/chatbot'
+  : `${import.meta.env.VITE_API_URL || ''}/api/chatbot`
+
 
 // ─── Local fallback jika Backend Server mati / error ─────────────────
 const getLocalResponse = (query: string): { text: string; action?: { label: string; serviceTypeId?: string } } => {

@@ -66,7 +66,7 @@ function MoveHandler({ onMove }: { onMove: (lat: number, lon: number) => void })
 
 export default function Map({ center, userPos, mechanicPos, zoom = 15, className = 'h-[300px] w-full', markers = [], onCenterChange }: MapProps & { onCenterChange?: (lat: number, lon: number) => void }) {
   return (
-    <div className={`${className} rounded-2xl overflow-hidden border border-slate-700 shadow-2xl z-10`}>
+    <div className={`${className} rounded-2xl overflow-hidden border border-slate-700 shadow-2xl z-0`}>
       <MapContainer 
         center={center} 
         zoom={zoom} 
