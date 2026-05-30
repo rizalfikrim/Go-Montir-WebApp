@@ -23,6 +23,13 @@ export const addVehicle = async (req: AuthRequest, res: Response, next: NextFunc
   } catch (e) { next(e); }
 };
 
+export const updateVehicle = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = await userService.updateVehicle(req.user!.id, req.params.vehicleId as string, req.body);
+    res.json({ success: true, message: 'Kendaraan berhasil diperbarui.', data });
+  } catch (e) { next(e); }
+};
+
 export const getVehicles = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const data = await userService.getVehicles(req.user!.id);

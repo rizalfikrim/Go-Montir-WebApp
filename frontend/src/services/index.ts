@@ -17,6 +17,7 @@ export const userApi = {
   updateProfile: (data: object) => api.patch('/users/profile', data),
   getVehicles: () => api.get('/users/vehicles'),
   addVehicle: (data: object) => api.post('/users/vehicles', data),
+  updateVehicle: (id: string, data: object) => api.patch(`/users/vehicles/${id}`, data),
   deleteVehicle: (id: string) => api.delete(`/users/vehicles/${id}`),
   getOrderHistory: (page = 1) => api.get(`/users/orders?page=${page}`),
 }

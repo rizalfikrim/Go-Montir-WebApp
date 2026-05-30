@@ -19,5 +19,16 @@ export const addVehicleSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 
+export const updateVehicleSchema = z.object({
+  brand: z.string().min(1).optional(),
+  model: z.string().min(1).optional(),
+  year: z.number().int().min(1990).max(new Date().getFullYear() + 1).optional(),
+  type: z.enum(['MOTOR', 'MOBIL', 'TRUK']).optional(),
+  plateNumber: z.string().optional(),
+  color: z.string().optional(),
+  isDefault: z.boolean().optional(),
+});
+
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
 export type AddVehicleDto = z.infer<typeof addVehicleSchema>;
+export type UpdateVehicleDto = z.infer<typeof updateVehicleSchema>;

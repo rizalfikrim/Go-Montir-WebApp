@@ -1,6 +1,6 @@
 import prisma from '@/config/database';
 import { AppError } from '@/middlewares/errorHandler';
-import { UpdateProfileDto, AddVehicleDto } from './user.schema';
+import { UpdateProfileDto, AddVehicleDto, UpdateVehicleDto } from './user.schema';
 
 export const getProfile = async (userId: string) => {
   const user = await prisma.user.findUnique({
@@ -44,6 +44,27 @@ export const addVehicle = async (userId: string, dto: AddVehicleDto) => {
 
   return prisma.vehicleInfo.create({
     data: { ...dto, userId },
+  });
+};
+
+export const updateVehicle = async (userId: string, vehicleId: string, dto: UpdateVehicleDto) => {
+  // Validasi ownership
+  const vehicle = await prisma.vehicleInfo.findFirst({
+    where: { id: vehicleId, userId },
+  });
+  if (!vehicle) throw new AppError('Kendaraan tidak ditemukan.', 404);
+
+  // Jika isDefault true, unset semua kendaraan lain
+  if (dto.isDefault) {
+    await prisma.vehicleInfo.updateMany({
+      where: { userId, id: { not: vehicleId } },
+      data: { isDefault: false },
+    });
+  }
+
+  return prisma.vehicleInfo.update({
+    where: { id: vehicleId },
+    data: dto,
   });
 };
 

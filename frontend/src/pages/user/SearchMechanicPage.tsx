@@ -17,6 +17,8 @@ export default function SearchMechanicPage() {
   const [selectedMechanic, setSelectedMechanic] = useState<any>(null)
   const [selectedService, setSelectedService] = useState<string>(state?.serviceTypeId || '')
   const [selectedVehicle, setSelectedVehicle] = useState<string>('')
+  const [vehicleTab, setVehicleTab] = useState<'custom' | 'saved'>('custom')
+  const [selectedSavedVehicleId, setSelectedSavedVehicleId] = useState<string | null>(null)
 
   const [description, setDescription] = useState('')
   const [coords, setCoords] = useState<[number, number]>([state?.lat || -6.2, state?.lon || 106.8])
@@ -203,26 +205,116 @@ export default function SearchMechanicPage() {
           </div>
         </section>
 
-        {/* Step 2: Vehicle Name */}
+        {/* Step 2: Vehicle Selection */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Car className="w-4 h-4 text-primary" />
             </div>
-            <h2 className="text-lg font-bold text-white">Nama Kendaraan</h2>
+            <h2 className="text-lg font-bold text-white">Pilih Kendaraan</h2>
           </div>
-          <div className="relative">
-            <Car className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text"
-              value={selectedVehicle}
-              onChange={(e) => setSelectedVehicle(e.target.value)}
-              placeholder="Contoh: Honda Vario Hitam (B 1234 ABC)"
-              className="input pl-10"
-              id="vehicle-input"
-            />
+
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-4 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50">
+            <button
+              onClick={() => {
+                setVehicleTab('custom')
+                setSelectedSavedVehicleId(null)
+              }}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                vehicleTab === 'custom'
+                  ? 'bg-primary text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Input Custom
+            </button>
+            <button
+              onClick={() => setVehicleTab('saved')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                vehicleTab === 'saved'
+                  ? 'bg-primary text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Kendaraan Saya
+            </button>
           </div>
-          <p className="text-[10px] text-slate-500 mt-2 italic">* Masukkan merk, tipe, atau plat nomor kendaraan Anda.</p>
+
+          {/* Tab Content */}
+          {vehicleTab === 'custom' ? (
+            <div className="relative">
+              <Car className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={selectedVehicle}
+                onChange={(e) => setSelectedVehicle(e.target.value)}
+                placeholder="Contoh: Honda Vario Hitam (B 1234 ABC)"
+                className="input pl-10"
+                id="vehicle-input"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {vehicles && vehicles.length > 0 ? (
+                vehicles.map((v: any) => (
+                  <button
+                    key={v.id}
+                    onClick={() => {
+                      setSelectedSavedVehicleId(v.id)
+                      setSelectedVehicle(`${v.brand} ${v.model} (${v.plateNumber || 'BELUM ADA PLAT'})`)
+                    }}
+                    className={`w-full p-3 text-left rounded-xl border-2 transition-all flex items-center gap-3 ${
+                      selectedSavedVehicleId === v.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex-shrink-0 text-lg">
+                      {v.type === 'MOTOR' ? '🏍️' : v.type === 'MOBIL' ? '🚗' : '🚛'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm text-white">
+                          {v.brand} {v.model} ({v.year})
+                        </p>
+                        <span className={`text-[7px] px-1 py-0.5 rounded font-black tracking-widest ${
+                          v.type === 'MOTOR'
+                            ? 'bg-primary/20 text-primary'
+                            : v.type === 'MOBIL'
+                            ? 'bg-info/20 text-info'
+                            : 'bg-warning/20 text-warning'
+                        }`}>
+                          {v.type}
+                        </span>
+                        {v.isDefault && (
+                          <span className="text-[7px] px-1 py-0.5 bg-success/20 text-success rounded font-black">DEFAULT</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5 font-mono truncate">
+                        {v.plateNumber || 'BELUM ADA PLAT'}
+                      </p>
+                    </div>
+                    {selectedSavedVehicleId === v.id && (
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div className="p-6 text-center border border-dashed border-slate-700 rounded-xl">
+                  <p className="text-sm text-slate-400">Belum ada kendaraan tersimpan.</p>
+                  <p className="text-xs text-slate-500 mt-1">Tambahkan kendaraan di halaman profil terlebih dahulu.</p>
+                </div>
+              )}
+            </div>
+          )}
+          <p className="text-[10px] text-slate-500 mt-2 italic">
+            {vehicleTab === 'custom' 
+              ? '* Masukkan merk, tipe, atau plat nomor kendaraan Anda.'
+              : '* Pilih kendaraan dari daftar tersimpan atau gunakan input custom.'}
+          </p>
         </section>
 
         {/* Step 3: Description */}
@@ -261,8 +353,13 @@ export default function SearchMechanicPage() {
             <Swiper
               modules={[SwiperNavigation]}
               navigation
-              slidesPerView={3}
-              spaceBetween={16}
+              slidesPerView={1.2}
+              spaceBetween={12}
+              breakpoints={{
+                480: { slidesPerView: 1.4, spaceBetween: 12 },
+                640: { slidesPerView: 1.6, spaceBetween: 14 },
+                768: { slidesPerView: 2, spaceBetween: 16 },
+              }}
               className="mySwiper"
             >
               {mechanics?.length > 0 ? (
@@ -270,39 +367,48 @@ export default function SearchMechanicPage() {
                   <SwiperSlide key={m.id}>
                     <button
                       onClick={() => setSelectedMechanic(m)}
-                      className={`w-full p-4 flex flex-col items-center gap-4 text-center transition-all rounded-2xl border-2 ${selectedMechanic?.id === m.id ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-slate-800 bg-slate-800/50 hover:border-slate-700'}`}
+                      className={`w-full p-4 flex flex-col items-center text-center transition-all rounded-2xl border-2 h-full min-h-[340px] ${selectedMechanic?.id === m.id ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-slate-800 bg-slate-800/50 hover:border-slate-700'}`}
                     >
-                      <div className="w-64 h-64 rounded-full overflow-hidden bg-slate-700 flex-shrink-0 mb-2 relative">
+                      {/* Avatar */}
+                      <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-700 flex-shrink-0 relative mb-3">
                         {m.user.avatarUrl ? (
                           <img src={m.user.avatarUrl} alt={m.user.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xl">
-                            {m.user.name.charAt(0)}
+                          <div className="w-full h-full flex items-center justify-center text-primary font-bold text-3xl">
+                            {m.user.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                         {selectedMechanic?.id === m.id && (
                           <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                            <CheckCircle2 className="text-white w-6 h-6" />
+                            <CheckCircle2 className="text-white w-5 h-5" />
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 text-center">
-                        <p className="font-bold text-white text-lg mt-2">{m.user.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-warning">
-                            <Star className="w-3 h-3 fill-current" />
+
+                      {/* Info */}
+                      <div className="flex-1 flex flex-col w-full">
+                        <p className="font-bold text-white text-sm line-clamp-2">{m.user.name}</p>
+                        
+                        {/* Rating & Distance */}
+                        <div className="flex items-center justify-center gap-2 mt-2 text-[9px] font-bold flex-wrap">
+                          <div className="flex items-center gap-0.5 text-warning bg-warning/10 px-2 py-1 rounded-full">
+                            <Star className="w-2.5 h-2.5 fill-current" />
                             {m.rating.toFixed(1)}
                           </div>
-                          <span className="text-slate-600">•</span>
-                          <div className="flex items-center gap-1 text-primary">
-                            <MapPin className="w-3 h-3" />
-                            <span className="text-[10px] font-bold">{m.distanceKm.toFixed(1)} KM</span>
+                          <div className="flex items-center gap-0.5 text-primary bg-primary/10 px-2 py-1 rounded-full">
+                            <MapPin className="w-2.5 h-2.5" />
+                            {m.distanceKm.toFixed(1)} KM
                           </div>
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <div className="px-2 py-1 rounded-lg bg-success/10 border border-success/20">
-                          <span className="text-[10px] font-bold text-success uppercase tracking-wider">Tersedia</span>
+
+                        {/* Spacer */}
+                        <div className="flex-1 min-h-2" />
+
+                        {/* Status Badge */}
+                        <div className="mt-3 w-full">
+                          <div className="w-full px-2 py-1.5 rounded-lg bg-success/10 border border-success/20">
+                            <span className="text-[9px] font-black text-success uppercase tracking-wider">Tersedia</span>
+                          </div>
                         </div>
                       </div>
                     </button>
