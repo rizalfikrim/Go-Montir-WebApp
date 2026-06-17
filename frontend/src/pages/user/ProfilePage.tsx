@@ -17,10 +17,13 @@ export default function ProfilePage() {
 
   // State untuk modals
   const [isEditPhoneOpen, setIsEditPhoneOpen] = useState(false)
+  const [isEditNameOpen, setIsEditNameOpen] = useState(false)
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false)
   const [isEditVehicleOpen, setIsEditVehicleOpen] = useState(false)
   const [selectedVehicleForEdit, setSelectedVehicleForEdit] = useState<any>(null)
   const [newPhone, setNewPhone] = useState(user?.phone || '')
+  const [newName, setNewName] = useState(user?.name || '')
   const [vehicleForm, setVehicleForm] = useState({
     type: 'MOTOR' as 'MOTOR' | 'MOBIL' | 'TRUK',
     brand: '',
@@ -44,13 +47,38 @@ export default function ProfilePage() {
   // Mutation untuk update phone
   const updatePhoneMutation = useMutation({
     mutationFn: (phone: string) => userApi.updateProfile({ phone }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
+      const updatedUser = res.data?.data
+      if (updatedUser) {
+        useAuthStore.setState(state => ({
+          user: state.user ? { ...state.user, ...updatedUser } : null
+        }))
+      }
       toast.success('Nomor HP berhasil diperbarui.')
       setIsEditPhoneOpen(false)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Gagal update nomor HP.')
+    }
+  })
+
+  // Mutation untuk update name (username)
+  const updateNameMutation = useMutation({
+    mutationFn: (name: string) => userApi.updateProfile({ name }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      const updatedUser = res.data?.data
+      if (updatedUser) {
+        useAuthStore.setState(state => ({
+          user: state.user ? { ...state.user, ...updatedUser } : null
+        }))
+      }
+      toast.success('Nama lengkap berhasil diperbarui.')
+      setIsEditNameOpen(false)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Gagal update nama.')
     }
   })
 
@@ -133,6 +161,14 @@ export default function ProfilePage() {
     updatePhoneMutation.mutate(newPhone)
   }
 
+  const handleSaveName = () => {
+    if (!newName.trim()) {
+      toast.error('Nama lengkap tidak boleh kosong.')
+      return
+    }
+    updateNameMutation.mutate(newName)
+  }
+
   const handleSaveVehicle = () => {
     if (!vehicleForm.brand.trim()) {
       toast.error('Merek kendaraan wajib diisi.')
@@ -192,10 +228,25 @@ export default function ProfilePage() {
         <section className="card p-4 grid grid-cols-1 gap-4 divide-y divide-slate-700/50">
           <button 
             onClick={() => {
-              setNewPhone(profile?.phone || '')
-              setIsEditPhoneOpen(true)
+              setNewName(profile?.name || user?.name || '')
+              setIsEditNameOpen(true)
             }}
             className="flex items-center gap-4 pt-0 hover:opacity-80 transition-opacity text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-slate-700/50 flex items-center justify-center text-slate-400">
+              <UserIcon className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Nama Lengkap</p>
+              <p className="text-sm font-semibold text-slate-200">{profile?.name || user?.name || '-'}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-600" />
+          </button>
+          <button 
+            onClick={() => {
+              setIsEmailModalOpen(true)
+            }}
+            className="flex items-center gap-4 pt-4 hover:opacity-80 transition-opacity text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-slate-700/50 flex items-center justify-center text-slate-400">
               <Mail className="w-5 h-5" />
@@ -316,7 +367,7 @@ export default function ProfilePage() {
 
       {/* Modal Edit Phone */}
       {isEditPhoneOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4 animate-scale-in border border-slate-700">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">Edit Nomor HP</h2>
@@ -362,7 +413,7 @@ export default function ProfilePage() {
 
       {/* Modal Add/Edit Vehicle */}
       {(isAddVehicleOpen || isEditVehicleOpen) && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
           <div className="bg-slate-800 rounded-t-2xl sm:rounded-2xl p-6 w-full max-w-sm space-y-4 animate-slide-up sm:animate-scale-in border border-slate-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between sticky top-0 bg-slate-800">
               <h2 className="text-lg font-bold text-white">
@@ -497,6 +548,87 @@ export default function ProfilePage() {
               >
                 {(addVehicleMutation.isPending || updateVehicleMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
                 {selectedVehicleForEdit ? 'Perbarui' : 'Tambah'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Edit Name */}
+      {isEditNameOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4 animate-scale-in border border-slate-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Edit Nama Lengkap</h2>
+              <button 
+                onClick={() => setIsEditNameOpen(false)}
+                className="p-1 hover:bg-slate-700 rounded-lg text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Contoh: Budi Santoso"
+                  className="input mt-2"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <button
+                onClick={() => setIsEditNameOpen(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveName}
+                disabled={updateNameMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {updateNameMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View Email (Read-Only) */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4 animate-scale-in border border-slate-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Alamat Email</h2>
+              <button 
+                onClick={() => setIsEmailModalOpen(false)}
+                className="p-1 hover:bg-slate-700 rounded-lg text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Alamat Email</label>
+                <input
+                  type="email"
+                  value={user?.email || ''}
+                  readOnly
+                  className="input mt-2 bg-slate-700/50 text-slate-400 border-slate-600/50 cursor-not-allowed select-all"
+                />
+                <p className="text-[10px] text-slate-500 mt-2">Email tidak dapat diubah demi keamanan akun Anda.</p>
+              </div>
+            </div>
+            <div className="pt-2">
+              <button
+                onClick={() => setIsEmailModalOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-colors"
+              >
+                Tutup
               </button>
             </div>
           </div>

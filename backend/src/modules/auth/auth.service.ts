@@ -92,6 +92,11 @@ export const login = async (dto: LoginDto) => {
   if (!user) throw new AppError('Email atau password salah.', 401);
   if (!user.isActive) throw new AppError('Akun Anda telah dinonaktifkan.', 403);
 
+  // Check if user has password (not OAuth-only user)
+  if (!user.password) {
+    throw new AppError('Akun ini hanya bisa login dengan Google. Silakan gunakan Google OAuth.', 401);
+  }
+
   const isMatch = await bcrypt.compare(dto.password, user.password);
   if (!isMatch) throw new AppError('Email atau password salah.', 401);
 

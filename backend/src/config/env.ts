@@ -16,6 +16,11 @@ const envSchema = z.object({
   MIDTRANS_SERVER_KEY: z.string().optional(),
   MIDTRANS_CLIENT_KEY: z.string().optional(),
   MIDTRANS_IS_PRODUCTION: z.string().default('false').transform(v => v === 'true'),
+  // Google OAuth 2.0
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_OAUTH_CALLBACK_URL: z.string().optional(),
+  SESSION_SECRET: z.string().default('your-super-secret-key-change-this'),
 });
 
 const parsed = envSchema.safeParse(process.env);

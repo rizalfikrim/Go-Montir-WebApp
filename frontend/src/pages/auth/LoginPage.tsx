@@ -6,6 +6,8 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import GoogleLoginButton from '@/components/common/GoogleLoginButton'
+
 
 const schema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -90,6 +92,18 @@ export default function LoginPage() {
           {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Masuk'}
         </button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-slate-700/60" />
+        </div>
+        <div className="relative flex justify-center text-xs text-slate-400 uppercase">
+          <span className="bg-slate-900 px-3 font-medium">atau masuk dengan</span>
+        </div>
+      </div>
+
+      <GoogleLoginButton variant="login" role="USER" className="w-full" />
+
 
       {/* Demo credentials */}
       <div className="mt-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">

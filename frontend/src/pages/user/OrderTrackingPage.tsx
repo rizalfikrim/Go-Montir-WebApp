@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, Phone, MessageSquare, XCircle, MapPin,
   Clock, CreditCard, CheckCircle2, Loader2, Navigation,
-  Wrench, AlertCircle, ShieldCheck, Zap, ChevronRight, Download
+  Wrench, AlertCircle, ShieldCheck, Zap, ChevronRight, Download, Star
 } from 'lucide-react'
 import { orderApi, paymentApi } from '@/services'
 import { getSocket, connectSocket } from '@/lib/socket'
@@ -65,6 +65,12 @@ export default function OrderTrackingPage() {
       toast.success(`Status: ${STATUS_CONFIG[updated.status]?.label || updated.status}`)
     })
 
+    socket.on('order_auto_cancelled', (data: any) => {
+      toast.error(`Pesanan dibatalkan: ${data.reason}`)
+      setOrder((prev: any) => ({ ...prev, status: 'FAILED' }))
+      setTimeout(() => navigate('/'), 2000)
+    })
+
     socket.on('mechanic_location', (data: any) => {
       console.log('Mechanic location update:', data)
       if (data.lat && data.lon) {
@@ -75,9 +81,33 @@ export default function OrderTrackingPage() {
     return () => {
       socket.emit('leave_order', orderId)
       socket.off('order_status_changed')
+      socket.off('order_auto_cancelled')
       socket.off('mechanic_location')
     }
   }, [orderId, accessToken])
+
+  // Fallback polling untuk detect auto-cancel jika socket tidak bekerja (polling every 5 seconds saat WAITING_ACCEPT)
+  useEffect(() => {
+    if (!orderId || !order || order.status !== 'WAITING_ACCEPT') return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await orderApi.getDetail(orderId)
+        const latestOrder = res.data.data
+        if (latestOrder.status !== order.status) {
+          setOrder(latestOrder)
+          if (latestOrder.status === 'FAILED') {
+            toast.error('Pesanan dibatalkan otomatis karena montir tidak merespons')
+            setTimeout(() => navigate('/'), 2000)
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [orderId, order?.status])
 
 
   const cancelMutation = useMutation({
@@ -136,15 +166,19 @@ export default function OrderTrackingPage() {
     }
   })
 
-  // Action for Mechanic to update status
-  const updateStatusMutation = useMutation({
-    mutationFn: (nextStatus: string) => orderApi.updateStatus(orderId!, nextStatus),
-    onSuccess: (res) => {
-      setOrder(res.data.data)
-      toast.success('Status pesanan diperbarui!')
-      queryClient.invalidateQueries({ queryKey: ['order', orderId] })
+  const submitReviewMutation = useMutation({
+    mutationFn: (data: { rating: number; comment?: string }) => orderApi.submitReview(orderId!, data),
+    onSuccess: () => {
+      toast.success('Terima kasih atas ulasan Anda!');
+      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Gagal mengirim ulasan.');
     }
-  })
+  });
+
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
 
   if (isLoading || !order) {
     return (
@@ -292,6 +326,49 @@ export default function OrderTrackingPage() {
           />
         </section>
 
+        {/* Rating Section */}
+        {isUser && order.status === 'COMPLETED' && !order.review && (
+          <section className="card p-6 space-y-4">
+            <h3 className="font-bold text-white">Beri Penilaian untuk Montir</h3>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className={`p-2 transition-transform hover:scale-110 ${star <= rating ? 'text-warning' : 'text-slate-600'}`}
+                >
+                  <Star className={`w-8 h-8 ${star <= rating ? 'fill-current' : ''}`} />
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="w-full p-3 bg-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-primary outline-none"
+              placeholder="Berikan ulasan Anda (opsional)..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+            />
+            <button
+              onClick={() => submitReviewMutation.mutate({ rating, comment })}
+              disabled={rating === 0 || submitReviewMutation.isPending}
+              className="btn-primary w-full py-3"
+            >
+              {submitReviewMutation.isPending ? <Loader2 className="animate-spin" /> : 'Kirim Ulasan'}
+            </button>
+          </section>
+        )}
+
+        {/* Display Submitted Review */}
+        {order.review && (
+          <section className="card p-4 space-y-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Ulasan Anda</h3>
+            <div className="flex gap-1 text-warning">
+              {[...Array(order.review.rating)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+            </div>
+            <p className="text-sm text-slate-300 italic">"{order.review.comment || 'Tanpa ulasan'}"</p>
+          </section>
+        )}
+
         {/* Mechanic/User Card */}
         <AnimatePresence>
           {isUser && order.mechanic && (
@@ -303,7 +380,27 @@ export default function OrderTrackingPage() {
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-slate-700 overflow-hidden border border-slate-600">
                   {order.mechanic.user.avatarUrl ? (
-                    <img src={order.mechanic.user.avatarUrl} alt={order.mechanic.user.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={order.mechanic.user.avatarUrl} 
+                      alt={order.mechanic.user.name} 
+                      className="w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.log(`❌ [Order Mechanic Avatar] Failed to load:`, order.mechanic.user.avatarUrl)
+                        const img = e.target as HTMLImageElement
+                        img.style.display = 'none'
+                        const parent = img.parentElement
+                        if (parent && parent.querySelector('div') === null) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'w-full h-full flex items-center justify-center text-primary text-2xl font-black'
+                          fallback.textContent = order.mechanic.user.name.charAt(0)
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log(`✅ [Order Mechanic Avatar] Loaded:`, order.mechanic.user.name)
+                      }}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-primary text-2xl font-black">
                       {order.mechanic.user.name.charAt(0)}
@@ -350,7 +447,27 @@ export default function OrderTrackingPage() {
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-slate-700 overflow-hidden border border-slate-600">
                   {order.user.avatarUrl ? (
-                    <img src={order.user.avatarUrl} alt={order.user.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={order.user.avatarUrl} 
+                      alt={order.user.name} 
+                      className="w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.log(`❌ [Order User Avatar] Failed to load:`, order.user.avatarUrl)
+                        const img = e.target as HTMLImageElement
+                        img.style.display = 'none'
+                        const parent = img.parentElement
+                        if (parent && parent.querySelector('div') === null) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'w-full h-full flex items-center justify-center text-primary text-2xl font-black'
+                          fallback.textContent = order.user.name.charAt(0)
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log(`✅ [Order User Avatar] Loaded:`, order.user.name)
+                      }}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-primary text-2xl font-black">
                       {order.user.name.charAt(0)}

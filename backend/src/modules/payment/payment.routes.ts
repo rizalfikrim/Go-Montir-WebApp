@@ -19,7 +19,8 @@ router.post('/create', async (req: any, res, next) => {
     if (!order) throw new AppError('Pesanan tidak ditemukan.', 404);
     if (order.userId !== req.user.id) throw new AppError('Tidak memiliki akses.', 403);
 
-    const amount = order.totalCost || order.estimatedCost || order.serviceType?.basePrice || 50000;
+    const amount = order.totalCost ?? order.estimatedCost ?? order.serviceType?.basePrice;
+    if (amount == null) throw new AppError('Harga pesanan tidak ditemukan. Pastikan jenis layanan dipilih.', 400);
 
     // Payload untuk Midtrans (hanya jika online)
     const snapPayload = {
@@ -30,7 +31,7 @@ router.post('/create', async (req: any, res, next) => {
       customer_details: {
         first_name: order.user.name,
         email: order.user.email,
-        phone: order.user.phone,
+        phone: order.user.phone ?? '-',
       },
     };
 

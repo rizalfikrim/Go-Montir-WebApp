@@ -21,10 +21,20 @@ export default function MechanicDashboard() {
   const navigate = useNavigate()
   const [incomingOrder, setIncomingOrder] = useState<any>(null)
   const [showPartnershipPopup, setShowPartnershipPopup] = useState(false)
+  const [socketStatus, setSocketStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
+  const [socketId, setSocketId] = useState<string>('')
   
   const { data: profile, isLoading: loadingProfile } = useQuery({
     queryKey: ['mechanic-profile'],
     queryFn: () => mechanicApi.getMyProfile().then(r => r.data.data),
+  })
+
+  // Fetch pending orders (WAITING_ACCEPT status)
+  const { data: pendingOrders, refetch: refetchPendingOrders } = useQuery({
+    queryKey: ['mechanic-pending-orders'],
+    queryFn: () => mechanicApi.getMyOrders().then(r => 
+      r.data.data?.orders?.filter((o: any) => o.status === 'WAITING_ACCEPT') || []
+    ),
   })
 
   const toggleOnline = useMutation({
@@ -94,17 +104,59 @@ export default function MechanicDashboard() {
   })
 
   useEffect(() => {
-    if (!accessToken) return
-    const socket = connectSocket(accessToken)
+    if (!accessToken) {
+      console.log('⚠️ No access token, skipping socket connection')
+      setSocketStatus('disconnected')
+      return
+    }
     
-    socket.on('new_order_request', (data: any) => {
-      console.log('Incoming order!', data)
+    setSocketStatus('connecting')
+    const socket = connectSocket(accessToken)
+    console.log('🔧 [MechanicDashboard] Setting up socket listeners, current socket id:', socket?.id)
+    
+    const handleNewOrderRequest = (data: any) => {
+      console.log('📱 [MechanicDashboard] Incoming order received!', data)
       setIncomingOrder(data)
-      // Play sound notification if possible
-    })
+      // Refetch pending orders as well
+      refetchPendingOrders()
+      toast.success('Pesanan baru masuk! 🔔', { duration: 4000 })
+    }
+
+    // Set up listeners - they will work even if socket is not connected yet
+    socket.on('new_order_request', handleNewOrderRequest)
+    
+    const handleConnect = () => {
+      console.log('✅ [MechanicDashboard] Socket connected, id:', socket.id)
+      setSocketStatus('connected')
+      setSocketId(socket.id || '')
+    }
+    
+    const handleConnectError = (error: any) => {
+      console.error('❌ [MechanicDashboard] Socket connection error:', error)
+      setSocketStatus('disconnected')
+    }
+    
+    const handleDisconnect = (reason: string) => {
+      console.log('⚠️ [MechanicDashboard] Socket disconnected, reason:', reason)
+      setSocketStatus('disconnected')
+    }
+
+    socket.on('connect', handleConnect)
+    socket.on('connect_error', handleConnectError)
+    socket.on('disconnect', handleDisconnect)
+    
+    // If already connected, update state
+    if (socket.connected) {
+      setSocketStatus('connected')
+      setSocketId(socket.id || '')
+    }
 
     return () => {
-      socket.off('new_order_request')
+      console.log('🧹 [MechanicDashboard] Cleaning up socket listeners')
+      socket.off('new_order_request', handleNewOrderRequest)
+      socket.off('connect', handleConnect)
+      socket.off('connect_error', handleConnectError)
+      socket.off('disconnect', handleDisconnect)
     }
   }, [accessToken])
 
@@ -163,8 +215,14 @@ export default function MechanicDashboard() {
               <TrendingUp className="w-4 h-4 text-primary" />
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pendapatan</span>
             </div>
-            <p className="text-xl font-black text-white">Rp 1.250.000</p>
-            <p className="text-[10px] text-success font-bold mt-1">+12% dari kemarin</p>
+            <p className="text-xl font-black text-white">
+              {new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+              }).format(profile?.totalIncome || 0)}
+            </p>
+            <p className="text-[10px] text-success font-bold mt-1">Total Pendapatan</p>
           </div>
           <div className="card-glass p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -177,6 +235,24 @@ export default function MechanicDashboard() {
               <span className="text-[10px] text-slate-300 font-bold">{profile?.rating.toFixed(1)} Rating</span>
             </div>
           </div>
+        </div>
+
+        {/* Socket Status Indicator */}
+        <div className="mt-4 flex items-center gap-2 text-[10px] font-bold">
+          <div className={`w-2 h-2 rounded-full ${
+            socketStatus === 'connected' ? 'bg-success animate-pulse' :
+            socketStatus === 'connecting' ? 'bg-warning animate-pulse' :
+            'bg-danger'
+          }`} />
+          <span className={`uppercase tracking-widest ${
+            socketStatus === 'connected' ? 'text-success' :
+            socketStatus === 'connecting' ? 'text-warning' :
+            'text-danger'
+          }`}>
+            {socketStatus === 'connected' ? `Socket Connected (${socketId?.slice(0, 8)})` :
+             socketStatus === 'connecting' ? 'Socket Connecting...' :
+             'Socket Disconnected'}
+          </span>
         </div>
       </div>
 
@@ -201,8 +277,41 @@ export default function MechanicDashboard() {
           </div>
         )}
 
+        {/* Pending Orders (Fallback UI) */}
+        {pendingOrders && pendingOrders.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <BellRing className="w-5 h-5 text-warning animate-bounce" />
+              <h2 className="text-lg font-bold text-warning">Pesanan Menunggu Konfirmasi</h2>
+            </div>
+            <div className="space-y-3">
+              {pendingOrders.map((order: any) => (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="card p-4 border-warning/30 bg-warning/5 flex items-start gap-4 cursor-pointer hover:border-warning/60 transition-all"
+                  onClick={() => {
+                    setIncomingOrder({ order, distance: 'Terpilih' })
+                  }}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-warning/20 flex items-center justify-center text-warning flex-shrink-0">
+                    <Clock className="w-6 h-6 animate-spin" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{order.user?.name}</p>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">{order.userAddress}</p>
+                    <p className="text-xs text-warning font-bold mt-2">Tap untuk terima pesanan</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <button className="card p-4 flex flex-col items-center text-center gap-2 hover:bg-slate-700/30">
             <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center text-info">
               <Clock className="w-5 h-5" />
@@ -214,6 +323,28 @@ export default function MechanicDashboard() {
               <Star className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-white">Ulasan User</span>
+          </button>
+          <button 
+            onClick={() => {
+              const socket = getSocket()
+              if (socket?.connected) {
+                console.log('✅ Socket test - Connected successfully')
+                toast.success(`Socket Connected!\nID: ${socket.id}`)
+              } else {
+                console.warn('⚠️ Socket test - Not connected')
+                toast.error('Socket tidak terhubung')
+              }
+            }}
+            className="card p-4 flex flex-col items-center text-center gap-2 hover:bg-slate-700/30"
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              socketStatus === 'connected' 
+                ? 'bg-success/10 text-success' 
+                : 'bg-danger/10 text-danger'
+            }`}>
+              <Activity className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white">Test Socket</span>
           </button>
         </div>
 

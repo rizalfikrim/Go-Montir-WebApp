@@ -19,6 +19,8 @@ interface AuthState {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (data: RegisterData) => Promise<void>
+  loginWithGoogle: (googleData: { googleId: string; displayName: string; email: string; photoUrl?: string; role?: 'USER' | 'MECHANIC' }) => Promise<void>
+  setOAuthSession: (user: User, accessToken: string) => void
   logout: () => Promise<void>
   setUser: (user: User) => void
   hydrate: () => Promise<void>
@@ -61,6 +63,23 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginWithGoogle: async (googleData) => {
+        set({ isLoading: true })
+        try {
+          const { data } = await api.post('/auth/google/register', googleData)
+          const { user, accessToken } = data.data
+          set({ user, accessToken, isAuthenticated: true })
+          connectSocket(accessToken)
+        } finally {
+          set({ isLoading: false })
+        }
+      },
+
+      setOAuthSession: (user, accessToken) => {
+        set({ user, accessToken, isAuthenticated: true })
+        connectSocket(accessToken)
+      },
+
       logout: async () => {
         try {
           await api.post('/auth/logout')
@@ -82,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user: null, accessToken: null, isAuthenticated: false })
         }
       },
+
     }),
     {
       name: 'gomontir-auth',

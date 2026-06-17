@@ -54,7 +54,25 @@ export default function MechanicProfilePage() {
           <div className="relative">
             <div className="w-24 h-24 rounded-[2rem] bg-primary/20 border-4 border-slate-800 flex items-center justify-center text-3xl font-black text-primary shadow-glow overflow-hidden">
               {profile?.user.avatarUrl ? (
-                <img src={profile.user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <img 
+                  src={profile.user.avatarUrl} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    console.log('❌ [Avatar] Image failed to load:', profile.user.avatarUrl)
+                    // Fallback to initial
+                    const img = e.target as HTMLImageElement
+                    img.style.display = 'none'
+                    const parent = img.parentElement
+                    if (parent && !parent.textContent?.includes(user?.name?.charAt(0))) {
+                      parent.innerHTML = (user?.name?.charAt(0) ?? 'U').toUpperCase()
+                    }
+                  }}
+                  onLoad={() => {
+                    console.log('✅ [Avatar] Image loaded successfully:', profile.user.avatarUrl)
+                  }}
+                />
               ) : (
                 user?.name?.charAt(0).toUpperCase()
               )}

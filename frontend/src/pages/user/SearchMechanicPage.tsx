@@ -23,6 +23,8 @@ export default function SearchMechanicPage() {
   const [description, setDescription] = useState('')
   const [coords, setCoords] = useState<[number, number]>([state?.lat || -6.2, state?.lon || 106.8])
   const [address, setAddress] = useState(state?.address || 'Lokasi Terdeteksi')
+  const [hoveredService, setHoveredService] = useState<any>(null)
+  const [hoveredReview, setHoveredReview] = useState<any>(null)
 
   // Ambil lokasi user secara real-time saat halaman dibuka jika tidak dari home
   useEffect(() => {
@@ -177,6 +179,21 @@ export default function SearchMechanicPage() {
                 <button
                   key={svc.id}
                   onClick={() => setSelectedService(svc.id)}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setHoveredService({
+                      id: svc.id,
+                      name: svc.name,
+                      description: svc.description,
+                      rect: {
+                        top: rect.top,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height,
+                      }
+                    })
+                  }}
+                  onMouseLeave={() => setHoveredService(null)}
                   className={`flex-shrink-0 p-4 rounded-2xl border-2 transition-all duration-200 text-left w-36 ${
                     selectedService === svc.id
                       ? 'border-primary bg-primary/10'
@@ -372,7 +389,28 @@ export default function SearchMechanicPage() {
                       {/* Avatar */}
                       <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-700 flex-shrink-0 relative mb-3">
                         {m.user.avatarUrl ? (
-                          <img src={m.user.avatarUrl} alt={m.user.name} className="w-full h-full object-cover" />
+                          <img 
+                            src={m.user.avatarUrl} 
+                            alt={m.user.name} 
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                            onError={(e) => {
+                              console.log(`❌ [Mechanic Avatar] Failed to load:`, m.user.avatarUrl)
+                              // Fallback to initial
+                              const img = e.target as HTMLImageElement
+                              img.style.display = 'none'
+                              const parent = img.parentElement
+                              if (parent && parent.querySelector('div') === null) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'w-full h-full flex items-center justify-center text-primary font-bold text-3xl'
+                                fallback.textContent = m.user.name.charAt(0).toUpperCase()
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                            onLoad={() => {
+                              console.log(`✅ [Mechanic Avatar] Loaded successfully:`, m.user.name)
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-primary font-bold text-3xl">
                             {m.user.name.charAt(0).toUpperCase()}
@@ -400,6 +438,40 @@ export default function SearchMechanicPage() {
                             {m.distanceKm.toFixed(1)} KM
                           </div>
                         </div>
+
+                        {/* Review Previews */}
+                        {m.reviews && m.reviews.length > 0 && (
+                          <div className="w-full mt-3 text-left">
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest pl-1 mb-1.5">Ulasan Terbaru</p>
+                            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                              {m.reviews.map((rev: any) => (
+                                <div 
+                                  key={rev.id} 
+                                  className="text-[9px] bg-slate-700/30 p-1.5 rounded-md flex-shrink-0 flex items-center gap-1 border border-slate-700/50 cursor-pointer hover:border-slate-500 transition-colors"
+                                  onMouseEnter={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect()
+                                    setHoveredReview({
+                                      rating: rev.rating,
+                                      comment: rev.comment,
+                                      rect: {
+                                        top: rect.top,
+                                        left: rect.left,
+                                        width: rect.width,
+                                        height: rect.height,
+                                      }
+                                    })
+                                  }}
+                                  onMouseLeave={() => setHoveredReview(null)}
+                                >
+                                  <span className="font-bold text-warning">*{rev.rating}</span>
+                                  <span className="text-slate-300 truncate max-w-[50px]">
+                                    {rev.comment?.length > 15 ? `${rev.comment.substring(0, 15)}...` : rev.comment || 'No comment'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Spacer */}
                         <div className="flex-1 min-h-2" />
@@ -474,9 +546,49 @@ export default function SearchMechanicPage() {
           </button>
         </div>
       </div>
-    </div>
-  )
-}
+
+      {/* Floating Description Tooltip */}
+      {hoveredService && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: `${hoveredService.rect.top - 12}px`,
+            left: `${hoveredService.rect.left + hoveredService.rect.width / 2}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+          className="w-56 p-3 bg-slate-950/95 backdrop-blur-md border border-slate-700/80 text-slate-200 rounded-xl text-xs shadow-2xl z-[999] pointer-events-none animate-fade-in flex flex-col gap-1"
+        >
+          <p className="font-bold text-white text-sm leading-tight">{hoveredService.name}</p>
+          <p className="text-[10px] text-slate-400 leading-relaxed">
+            {hoveredService.description || 'Layanan perbaikan dan perawatan kendaraan berkualitas.'}
+          </p>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-950" />
+        </div>
+      )}
+
+      {/* Floating Review Tooltip */}
+      {hoveredReview && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: `${hoveredReview.rect.top - 8}px`,
+            left: `${hoveredReview.rect.left + hoveredReview.rect.width / 2}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+          className="w-48 p-3 bg-slate-950/95 backdrop-blur-md border border-slate-700/80 text-slate-200 rounded-xl text-xs shadow-2xl z-[999] pointer-events-none animate-fade-in flex flex-col gap-1"
+        >
+          <p className="font-bold text-warning flex items-center gap-1">
+            <Star className="w-3 h-3 fill-current" /> {hoveredReview.rating} Bintang
+          </p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {hoveredReview.comment || 'Tanpa ulasan'}
+          </p>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-950" />
+        </div>
+      )}
+      </div>
+      )
+      }
 
 function AlertTriangle(props: any) {
   return (

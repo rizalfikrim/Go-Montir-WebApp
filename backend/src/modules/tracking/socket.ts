@@ -15,13 +15,18 @@ export const setupSocketIO = (io: Server) => {
   // ========================
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');
-    if (!token) return next(new Error('Authentication error: No token'));
+    if (!token) {
+      console.warn('⚠️ Socket connection attempt without token')
+      return next(new Error('Authentication error: No token'))
+    }
 
     try {
       const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as SocketUser;
       socket.data.user = decoded;
+      console.log(`✅ Socket authenticated for user: ${decoded.id} (${decoded.role})`)
       next();
-    } catch {
+    } catch (err) {
+      console.error('❌ Socket authentication failed:', err)
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -34,8 +39,11 @@ export const setupSocketIO = (io: Server) => {
     // Join Personal Room
     // ========================
     socket.join(`user:${user.id}`);
+    console.log(`📌 User ${user.id} joined room: user:${user.id}`)
+    
     if (user.role === 'MECHANIC') {
       socket.join(`mechanic:${user.id}`);
+      console.log(`🔧 Mechanic ${user.id} joined room: mechanic:${user.id}`)
     }
     if (user.role === 'ADMIN') {
       socket.join('admin:dashboard');

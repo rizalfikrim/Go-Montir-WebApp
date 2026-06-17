@@ -11,6 +11,7 @@ import AdminLayout from '@/layouts/AdminLayout'
 // Pages — Auth
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
+import AuthSuccessPage from '@/pages/auth/AuthSuccessPage'
 
 // Pages — User
 import HomePage from '@/pages/user/HomePage'
@@ -53,7 +54,9 @@ export default function App() {
       <Route path="/auth" element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="success" element={<AuthSuccessPage />} />
       </Route>
+
 
       {/* User */}
       <Route path="/" element={

@@ -31,10 +31,35 @@ export const getNearbyMechanics = async (
     },
   });
 
+  // Calculate ratings dynamically for each mechanic
+  const mechanicIds = mechanics.map(m => m.id);
+  
+  const [ratings, reviews] = await Promise.all([
+    prisma.review.groupBy({
+      by: ['mechanicId'],
+      where: { mechanicId: { in: mechanicIds } },
+      _avg: { rating: true }
+    }),
+    prisma.review.findMany({
+      where: { mechanicId: { in: mechanicIds } },
+      orderBy: { createdAt: 'desc' },
+      include: { reviewer: { select: { name: true } } }
+    })
+  ]);
+
+  const ratingMap = new Map(ratings.map(r => [r.mechanicId, r._avg.rating || 0]));
+  const reviewMap = new Map();
+  reviews.forEach(r => {
+    if (!reviewMap.has(r.mechanicId)) reviewMap.set(r.mechanicId, []);
+    if (reviewMap.get(r.mechanicId).length < 3) reviewMap.get(r.mechanicId).push(r);
+  });
+
   // Hitung jarak dan filter hanya yang Online & dalam radius
   const results = mechanics
     .map((m) => ({
       ...m,
+      rating: ratingMap.get(m.id) || 0,
+      reviews: reviewMap.get(m.id) || [],
       distanceKm: haversineDistance(
         userLat, userLon,
         m.lastLatitude!, m.lastLongitude!
@@ -59,7 +84,26 @@ export const getMechanicProfile = async (mechanicId: string) => {
     },
   });
   if (!mechanic) throw new AppError('Profil montir tidak ditemukan.', 404);
-  return mechanic;
+
+  // Recalculate stats for accuracy
+  const [stats, ratingAvg] = await Promise.all([
+    prisma.order.aggregate({
+      where: { mechanicId: mechanic.id, status: 'COMPLETED' },
+      _sum: { totalCost: true },
+      _count: { id: true }
+    }),
+    prisma.review.aggregate({
+      where: { mechanicId: mechanic.id },
+      _avg: { rating: true }
+    })
+  ]);
+
+  return {
+    ...mechanic,
+    totalIncome: stats._sum.totalCost || 0,
+    totalOrdersDone: stats._count.id || 0,
+    rating: ratingAvg._avg.rating || 0
+  };
 };
 
 export const getMechanicProfileByUserId = async (userId: string) => {
@@ -74,7 +118,26 @@ export const getMechanicProfileByUserId = async (userId: string) => {
     },
   });
   if (!mechanic) throw new AppError('Profil montir tidak ditemukan.', 404);
-  return mechanic;
+
+  // Recalculate stats for accuracy
+  const [stats, ratingAvg] = await Promise.all([
+    prisma.order.aggregate({
+      where: { mechanicId: mechanic.id, status: 'COMPLETED' },
+      _sum: { totalCost: true },
+      _count: { id: true }
+    }),
+    prisma.review.aggregate({
+      where: { mechanicId: mechanic.id },
+      _avg: { rating: true }
+    })
+  ]);
+
+  return {
+    ...mechanic,
+    totalIncome: stats._sum.totalCost || 0,
+    totalOrdersDone: stats._count.id || 0,
+    rating: ratingAvg._avg.rating || 0
+  };
 };
 
 export const updateMechanicProfile = async (userId: string, data: {

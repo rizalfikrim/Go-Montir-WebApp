@@ -6,6 +6,8 @@ import { Mail, Lock, User, Phone, Wrench, Eye, EyeOff, Loader2 } from 'lucide-re
 import { useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import GoogleLoginButton from '@/components/common/GoogleLoginButton'
+
 
 const schema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter'),
@@ -125,6 +127,18 @@ export default function RegisterPage() {
           {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Daftar Sekarang'}
         </button>
       </form>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-slate-700/60" />
+        </div>
+        <div className="relative flex justify-center text-xs text-slate-400 uppercase">
+          <span className="bg-slate-900 px-3 font-medium">atau daftar dengan</span>
+        </div>
+      </div>
+
+      <GoogleLoginButton variant="register" role={selectedRole} className="w-full" />
+
     </div>
   )
 }

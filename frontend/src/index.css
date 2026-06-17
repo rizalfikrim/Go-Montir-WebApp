@@ -205,10 +205,20 @@
     to   { opacity: 1; }
   }
 
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
   .animate-spin-slow     { animation: spin-slow 3s linear infinite; }
   .animate-pulse-glow    { animation: pulse-glow 2s ease-in-out infinite; }
   .animate-slide-up      { animation: slide-up 0.3s ease-out; }
   .animate-fade-in       { animation: fade-in 0.4s ease-out; }
+  .animate-scale-in      { animation: scale-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide { scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
 
 /* ================================

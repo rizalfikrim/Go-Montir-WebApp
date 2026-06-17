@@ -7,6 +7,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import passport from '@/config/passport';
 import { Server } from 'socket.io';
 import chatbotRoutes from '@/modules/chatbot/chatbot.routes';
 
@@ -56,6 +58,23 @@ app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ========================
+// Passport.js Setup (for OAuth)
+// ========================
+app.use(session({
+  secret: env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 jam
+  },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // ========================
 // Rate Limiter
