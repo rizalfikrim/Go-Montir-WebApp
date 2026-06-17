@@ -35,7 +35,7 @@ export const googleCallback = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    const profile = req.user as GoogleProfile;
+    const profile = req.user as unknown as GoogleProfile;
     const role = (req.query.role as Role) || 'USER';
 
     const { user, accessToken, refreshToken } = await googleService.googleOAuthHandler(profile, role);
