@@ -118,6 +118,16 @@ export default function OrderTrackingPage() {
     }
   })
 
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: string) => orderApi.updateStatus(orderId!, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order', orderId] })
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Gagal memperbarui status')
+    }
+  })
+
   const paymentMutation = useMutation({
     mutationFn: (method: 'QRIS' | 'COD') => paymentApi.createTransaction(orderId!, method),
     onSuccess: (res, method) => {
