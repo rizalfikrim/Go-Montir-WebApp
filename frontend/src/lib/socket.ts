@@ -6,9 +6,8 @@ export const getSocket = (token?: string): Socket => {
   if (!socket) {
     // In dev, connect directly to backend. In prod, use VITE_API_URL
     // (Don't use vite proxy because websocket proxying can be tricky)
-    const socketUrl = import.meta.env.DEV 
-      ? 'http://localhost:5000' 
-      : (import.meta.env.VITE_API_URL || window.location.origin)
+    const socketUrl = import.meta.env.VITE_API_URL || 
+      (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin)
     
     console.log('🔌 Creating socket connection to:', socketUrl, 'DEV:', import.meta.env.DEV)
     
