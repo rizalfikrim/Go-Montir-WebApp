@@ -107,7 +107,7 @@ export const getMechanicProfile = async (mechanicId: string) => {
 };
 
 export const getMechanicProfileByUserId = async (userId: string) => {
-  const mechanic = await prisma.mechanicProfile.findUnique({
+  let mechanic = await prisma.mechanicProfile.findUnique({
     where: { userId },
     include: {
       user: { select: { name: true, avatarUrl: true, phone: true, email: true } },
@@ -117,7 +117,29 @@ export const getMechanicProfileByUserId = async (userId: string) => {
       }
     },
   });
-  if (!mechanic) throw new AppError('Profil montir tidak ditemukan.', 404);
+
+  if (!mechanic) {
+    // Jika user memang ber-role MECHANIC tapi profilnya belum terbuat di database
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user && user.role === 'MECHANIC') {
+      mechanic = await prisma.mechanicProfile.create({
+        data: {
+          userId,
+          specializations: [],
+          status: 'ACTIVE'
+        },
+        include: {
+          user: { select: { name: true, avatarUrl: true, phone: true, email: true } },
+          subscriptions: {
+            where: { status: 'ACTIVE' },
+            include: { package: true }
+          }
+        }
+      });
+    } else {
+      throw new AppError('Profil montir tidak ditemukan.', 404);
+    }
+  }
 
   // Recalculate stats for accuracy
   const [stats, ratingAvg] = await Promise.all([

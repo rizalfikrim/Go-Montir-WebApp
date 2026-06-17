@@ -19,8 +19,8 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+  if (err instanceof AppError || (err && (err as any).isOperational)) {
+    return res.status((err as any).statusCode || 400).json({
       success: false,
       message: err.message,
     });

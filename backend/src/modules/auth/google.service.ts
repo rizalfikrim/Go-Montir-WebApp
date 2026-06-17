@@ -52,6 +52,41 @@ export const googleOAuthHandler = async (profile: GoogleProfile, role: Role = 'U
       oauthProvider: true,
     },
   });
+  
+  if (user) {
+    // Jika user memilih login/register sebagai MECHANIC tetapi di DB masih bertipe USER, upgrade rolenya.
+    if (role === 'MECHANIC' && user.role === 'USER') {
+      console.log(`  → Upgrading user ${user.id} role from USER to MECHANIC`)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          role: 'MECHANIC',
+          mechanic: {
+            connectOrCreate: {
+              where: { userId: user.id },
+              create: { specializations: [], status: 'ACTIVE' }
+            }
+          }
+        } as any
+      });
+      user.role = 'MECHANIC';
+    }
+
+    // Pastikan jika rolenya MECHANIC, dia memiliki profil mekanik
+    if (user.role === 'MECHANIC') {
+      const profileExists = await prisma.mechanicProfile.findUnique({ where: { userId: user.id } });
+      if (!profileExists) {
+        console.log(`  → Creating missing mechanic profile for existing mechanic user ${user.id}`)
+        await prisma.mechanicProfile.create({
+          data: {
+            userId: user.id,
+            specializations: [],
+            status: 'ACTIVE'
+          }
+        });
+      }
+    }
+  }
 
   // Jika user belum ada, buat akun baru
   if (!user) {
