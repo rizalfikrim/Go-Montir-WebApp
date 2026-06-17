@@ -36,8 +36,7 @@ const httpServer = http.createServer(app);
 // ========================
 export const io = new Server(httpServer, {
   cors: {
-    // origin: env.CLIENT_URL || '*',
-    origin: '*',
+    origin: true,
     credentials: true,
   },
 });
@@ -48,8 +47,7 @@ setupSocketIO(io);
 // ========================
 app.use(helmet());
 app.use(cors({
-  // origin: env.CLIENT_URL,
-  origin: "*",
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
