@@ -128,9 +128,30 @@ export default function OrderTrackingPage() {
     }
   })
 
+  const loadSnapScript = (clientKey: string, isProduction: boolean) => {
+    return new Promise<void>((resolve, reject) => {
+      const scriptId = 'midtrans-snap-script';
+      if (document.getElementById(scriptId)) {
+        // If script is already there, we might need to recreate it if the mode changes,
+        // but normally it stays the same. To be safe, resolve directly.
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = isProduction 
+        ? 'https://app.midtrans.com/snap/snap.js' 
+        : 'https://app.sandbox.midtrans.com/snap/snap.js';
+      script.setAttribute('data-client-key', clientKey);
+      script.id = scriptId;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Gagal memuat Midtrans Snap SDK'));
+      document.body.appendChild(script);
+    });
+  };
+
   const paymentMutation = useMutation({
     mutationFn: (method: 'QRIS' | 'COD') => paymentApi.createTransaction(orderId!, method),
-    onSuccess: (res, method) => {
+    onSuccess: async (res, method) => {
       if (method === 'COD') {
         toast.success('Metode Pembayaran Tunai (COD) dipilih. Silakan bayar ke montir.')
         setShowPaymentOptions(false)
@@ -138,27 +159,37 @@ export default function OrderTrackingPage() {
         return
       }
 
-      const { snapPayload } = res.data.data
-      if ((window as any).snap) {
-        (window as any).snap.pay(snapPayload.token || snapPayload.transaction_details.order_id, {
-          onSuccess: (result: any) => {
-            toast.success('Pembayaran Berhasil!')
-            queryClient.invalidateQueries({ queryKey: ['order', orderId] })
-            setShowPaymentOptions(false)
-          },
-          onPending: (result: any) => {
-            toast.success('Menunggu Pembayaran...')
-            setShowPaymentOptions(false)
-          },
-          onError: (result: any) => {
-            toast.error('Pembayaran Gagal.')
-          },
-          onClose: () => {
-            toast('Modal pembayaran ditutup.', { icon: 'ℹ️' })
-          }
-        })
-      } else {
-        toast.error('Sistem pembayaran belum siap.')
+      const { snapPayload, clientKey, isProduction } = res.data.data
+      if (!snapPayload || !snapPayload.token) {
+        toast.error('Gagal mendapatkan token pembayaran dari server.')
+        return
+      }
+
+      try {
+        await loadSnapScript(clientKey || '', !!isProduction);
+        if ((window as any).snap) {
+          (window as any).snap.pay(snapPayload.token, {
+            onSuccess: (result: any) => {
+              toast.success('Pembayaran Berhasil!')
+              queryClient.invalidateQueries({ queryKey: ['order', orderId] })
+              setShowPaymentOptions(false)
+            },
+            onPending: (result: any) => {
+              toast.success('Menunggu Pembayaran...')
+              setShowPaymentOptions(false)
+            },
+            onError: (result: any) => {
+              toast.error('Pembayaran Gagal.')
+            },
+            onClose: () => {
+              toast('Modal pembayaran ditutup.', { icon: 'ℹ️' })
+            }
+          })
+        } else {
+          toast.error('Sistem pembayaran belum siap.')
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Gagal memuat sistem pembayaran.')
       }
     }
   })
