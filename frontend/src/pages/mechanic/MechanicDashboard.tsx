@@ -232,7 +232,7 @@ export default function MechanicDashboard() {
             <p className="text-xl font-black text-white">{profile?.totalOrdersDone || 0}</p>
             <div className="flex items-center gap-1 mt-1">
               <Star className="w-3 h-3 text-warning fill-current" />
-              <span className="text-[10px] text-slate-300 font-bold">{profile?.rating.toFixed(1)} Rating</span>
+              <span className="text-[10px] text-slate-300 font-bold">{(profile?.rating ?? 0).toFixed(1)} Rating</span>
             </div>
           </div>
         </div>

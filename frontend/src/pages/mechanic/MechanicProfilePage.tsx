@@ -85,7 +85,7 @@ export default function MechanicProfilePage() {
             <h2 className="text-2xl font-bold text-white">{user?.name}</h2>
             <div className="flex items-center justify-center gap-2 mt-1">
               <span className="text-warning font-bold flex items-center gap-1">
-                <Star className="w-4 h-4 fill-current" /> {profile?.rating.toFixed(1)}
+                <Star className="w-4 h-4 fill-current" /> {(profile?.rating ?? 0).toFixed(1)}
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-slate-400 font-medium">{profile?.totalOrdersDone || 0} Order Selesai</span>
