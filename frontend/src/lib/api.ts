@@ -13,6 +13,18 @@ export const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use((config) => {
+  try {
+    const authStorage = localStorage.getItem('gomontir-auth')
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage)
+      const token = parsed?.state?.accessToken
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+  } catch (error) {
+    console.error('Failed to parse auth token from localStorage', error)
+  }
   return config
 })
 
