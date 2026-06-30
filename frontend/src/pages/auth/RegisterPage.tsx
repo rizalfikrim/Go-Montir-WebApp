@@ -25,7 +25,7 @@ export default function RegisterPage() {
   const navigate = useNavigate()
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     defaultValues: { role: 'USER' },
   })
 

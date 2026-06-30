@@ -21,7 +21,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
   })
 
   const onSubmit = async (data: FormData) => {

@@ -65,7 +65,7 @@ export default function MechanicProfilePage() {
                     const img = e.target as HTMLImageElement
                     img.style.display = 'none'
                     const parent = img.parentElement
-                    if (parent && !parent.textContent?.includes(user?.name?.charAt(0))) {
+                    if (parent && !parent.textContent?.includes(user?.name?.charAt(0) ?? '')) {
                       parent.innerHTML = (user?.name?.charAt(0) ?? 'U').toUpperCase()
                     }
                   }}

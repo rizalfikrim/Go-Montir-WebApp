@@ -174,8 +174,8 @@ export default function SearchMechanicPage() {
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {services?.length > 0 ? (
-              services.map((svc: any) => (
+            {filteredServices?.length > 0 ? (
+              filteredServices.map((svc: any) => (
                 <button
                   key={svc.id}
                   onClick={() => setSelectedService(svc.id)}
